@@ -1,20 +1,66 @@
 -- DRAXUI: Enhanced Roblox UI Library inspired by ImGui and Rayfield
--- Version: 1.0.0
+-- Version: 1.1.0
 -- Features: Immediate-mode GUI, tabs, custom fonts, particle effects, sliders, keybinds, and more
 -- Usage: local DRAXUI = require(path.to.DRAXUI).Init()
+--
+-- Compatible with multiple Roblox executors (Xeno, AWP, Synapse X, etc.)
+-- For exploit scripts usage: loadstring(game:HttpGet('https://raw.githubusercontent.com/yourusername/DRAXUI/main/UI.lua'))()
 --
 -- GitHub: https://github.com/yourusername/DRAXUI
 -- Documentation: See README.md for full documentation and examples
 
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+-- Detect executor environment
+local executorDetected = "Unknown"
+local isExploitEnvironment = false
+
+-- Check for common exploit globals
+if getgenv or syn or KRNL_LOADED or XENO_LOADED or is_sirhurt_closure or PROTOSMASHER_LOADED then
+    isExploitEnvironment = true
+    
+    -- Detect specific executors
+    if getgenv and getgenv().executor then
+        executorDetected = getgenv().executor
+    elseif XENO_LOADED then
+        executorDetected = "Xeno"
+    elseif KRNL_LOADED then
+        executorDetected = "KRNL"
+    elseif syn and syn.protect_gui then
+        executorDetected = "Synapse X"
+    elseif secure_load then
+        executorDetected = "Sentinel"
+    elseif is_sirhurt_closure then
+        executorDetected = "SirHurt"
+    elseif PROTOSMASHER_LOADED then
+        executorDetected = "ProtoSmasher"
+    elseif Shadow_Check then
+        executorDetected = "Shadow"
+    elseif getexecutorname then
+        executorDetected = getexecutorname()
+    end
+    
+    print("DRAXUI: Running in exploit environment - " .. executorDetected)
+end
+
+-- Safe service access function
+local function GetService(serviceName)
+    return game:GetService(serviceName)
+end
+
+local UserInputService = GetService("UserInputService")
+local TweenService = GetService("TweenService")
+local RunService = GetService("RunService")
+local Players = GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
 local DRAXUI = {}
 DRAXUI.__index = DRAXUI
 
 -- Version info
-DRAXUI.Version = "1.0.0"
+DRAXUI.Version = "1.1.0"
+DRAXUI.ExecutorInfo = {
+    IsExploit = isExploitEnvironment,
+    Executor = executorDetected
+}
 
 -- Configuration
 local Config = {
@@ -27,17 +73,31 @@ local Config = {
         ErrorColor = Color3.fromRGB(255, 0, 0),
         SuccessColor = Color3.fromRGB(0, 255, 0),
         WarningColor = Color3.fromRGB(255, 255, 0),
+        InfoColor = Color3.fromRGB(0, 191, 255),
+        GradientStart = Color3.fromRGB(30, 144, 255),
+        GradientEnd = Color3.fromRGB(70, 73, 240),
+        ShadowColor = Color3.fromRGB(0, 0, 0),
         WindowTransparency = 0.9,
         AnimationSpeed = 0.15,
         CornerRadius = 8,
+        ButtonHoverBrightness = 0.1,
+        ElementSpacing = 10,
     },
     DefaultWindowSize = Vector2.new(400, 500),
-    DefaultFont = Enum.Font.SourceSansPro,
-    FontSize = 16,
-    ParticleCount = 20,
+    DefaultFont = Enum.Font.GothamSemibold,  -- More modern font
+    FontSize = 14,
+    ParticleCount = 30,  -- More particles for better effect
     ParticleSpeed = 0.5,
     TooltipDelay = 0.5,
     NotificationDuration = 3,
+    WatermarkText = "DRAXUI",
+    WatermarkTransparency = 0.7,
+    EnableSounds = true,
+    EnableAnimations = true,
+    EnableBlur = true,
+    BlurSize = 10,
+    RippleEffectEnabled = true,
+    DropShadowEnabled = true,
 }
 
 -- Internal state
@@ -54,6 +114,40 @@ local State = {
     LastHoveredElement = nil,
     TooltipTimer = 0,
     MousePosition = Vector2.new(0, 0),
+    Sounds = {},
+    Watermark = nil,
+    Blur = nil,
+    ActiveRipples = {},
+    DropShadows = {},
+    InputBoxes = {},
+    Accordions = {},
+    GridLayouts = {},
+    SearchResults = {},
+    ThemePresets = {
+        Dark = {
+            PrimaryColor = Color3.fromRGB(30, 144, 255),
+            BackgroundColor = Color3.fromRGB(20, 20, 20),
+            SecondaryColor = Color3.fromRGB(50, 50, 50),
+            TextColor = Color3.fromRGB(255, 255, 255),
+            AccentColor = Color3.fromRGB(80, 80, 80),
+        },
+        Light = {
+            PrimaryColor = Color3.fromRGB(0, 120, 215),
+            BackgroundColor = Color3.fromRGB(240, 240, 240),
+            SecondaryColor = Color3.fromRGB(200, 200, 200),
+            TextColor = Color3.fromRGB(0, 0, 0),
+            AccentColor = Color3.fromRGB(160, 160, 160),
+        },
+        Neon = {
+            PrimaryColor = Color3.fromRGB(0, 255, 157),
+            BackgroundColor = Color3.fromRGB(10, 10, 10),
+            SecondaryColor = Color3.fromRGB(30, 30, 30),
+            TextColor = Color3.fromRGB(255, 255, 255),
+            AccentColor = Color3.fromRGB(50, 50, 50),
+            GradientStart = Color3.fromRGB(0, 255, 157),
+            GradientEnd = Color3.fromRGB(0, 183, 255),
+        },
+    },
 }
 
 -- Helper function to create UI elements
@@ -63,6 +157,124 @@ local function CreateUIElement(class, properties)
         element[prop] = value
     end
     return element
+end
+
+-- Helper function to create a gradient
+local function CreateGradient(parent, startColor, endColor, rotation)
+    local gradient = CreateUIElement("UIGradient", {
+        Parent = parent,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, startColor),
+            ColorSequenceKeypoint.new(1, endColor)
+        }),
+        Rotation = rotation or 90,
+    })
+    return gradient
+end
+
+-- Helper function to create a drop shadow
+local function CreateDropShadow(parent, size, position, transparency)
+    if not Config.DropShadowEnabled then return nil end
+    
+    local shadow = CreateUIElement("Frame", {
+        Parent = parent.Parent,
+        Size = UDim2.new(size.X.Scale, size.X.Offset + 10, size.Y.Scale, size.Y.Offset + 10),
+        Position = UDim2.new(position.X.Scale, position.X.Offset - 5, position.Y.Scale, position.Y.Offset - 5),
+        BackgroundColor3 = Config.Theme.ShadowColor,
+        BackgroundTransparency = transparency or 0.7,
+        BorderSizePixel = 0,
+        ZIndex = parent.ZIndex - 1,
+    })
+    
+    local corner = CreateUIElement("UICorner", {
+        Parent = shadow,
+        CornerRadius = UDim.new(0, Config.Theme.CornerRadius + 2),
+    })
+    
+    -- Keep shadow in sync with parent
+    local connection = RunService.RenderStepped:Connect(function()
+        if parent and parent.Parent then
+            shadow.Position = UDim2.new(
+                parent.Position.X.Scale, parent.Position.X.Offset - 5,
+                parent.Position.Y.Scale, parent.Position.Y.Offset - 5
+            )
+        else
+            shadow:Destroy()
+            connection:Disconnect()
+        end
+    end)
+    
+    table.insert(State.DropShadows, {Shadow = shadow, Connection = connection})
+    return shadow
+end
+
+-- Helper function to create a ripple effect
+local function CreateRippleEffect(parent, inputPosition)
+    if not Config.RippleEffectEnabled then return end
+    
+    local parentAbsoluteSize = parent.AbsoluteSize
+    local parentAbsolutePosition = parent.AbsolutePosition
+    
+    local ripple = CreateUIElement("Frame", {
+        Parent = parent,
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.8,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, inputPosition.X - parentAbsolutePosition.X, 0, inputPosition.Y - parentAbsolutePosition.Y),
+        Size = UDim2.new(0, 0, 0, 0),
+        ZIndex = parent.ZIndex + 1,
+    })
+    
+    local corner = CreateUIElement("UICorner", {
+        Parent = ripple,
+        CornerRadius = UDim.new(1, 0),
+    })
+    
+    local maxSize = math.max(parentAbsoluteSize.X, parentAbsoluteSize.Y) * 2
+    local rippleTween = CreateTween(ripple, {
+        Size = UDim2.new(0, maxSize, 0, maxSize),
+        BackgroundTransparency = 1
+    }, 0.5)
+    
+    rippleTween.Completed:Connect(function()
+        ripple:Destroy()
+    end)
+    
+    table.insert(State.ActiveRipples, ripple)
+    return ripple
+end
+
+-- Helper function to play a sound
+local function PlaySound(soundType)
+    if not Config.EnableSounds then return end
+    
+    local soundId
+    if soundType == "Click" then
+        soundId = "rbxassetid://6333717580"
+    elseif soundType == "Hover" then
+        soundId = "rbxassetid://6333716356"
+    elseif soundType == "Toggle" then
+        soundId = "rbxassetid://6333716942"
+    elseif soundType == "Notification" then
+        soundId = "rbxassetid://6518811702"
+    elseif soundType == "Error" then
+        soundId = "rbxassetid://6518812078"
+    else
+        return
+    end
+    
+    local sound = Instance.new("Sound")
+    sound.SoundId = soundId
+    sound.Volume = 0.5
+    sound.Parent = game:GetService("SoundService")
+    sound:Play()
+    
+    sound.Ended:Connect(function()
+        sound:Destroy()
+    end)
+    
+    return sound
 end
 
 -- Tween helper for animations
@@ -76,51 +288,203 @@ end
 -- Initialize DRAXUI
 function DRAXUI.Init(parent, settings)
     local self = setmetatable({}, DRAXUI)
+    
+    -- Create ScreenGui
     self.ScreenGui = CreateUIElement("ScreenGui", {
-        Parent = parent or game.Players.LocalPlayer.PlayerGui,
+        Name = "DRAXUI_" .. math.random(100000, 999999), -- Random name to avoid detection
         ResetOnSpawn = false,
         IgnoreGuiInset = true,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder = 999, -- Ensure UI is on top
     })
+    
+    -- Handle different executor environments for GUI protection
+    if isExploitEnvironment then
+        -- Determine parent based on executor
+        if not parent then
+            -- Default parent handling for exploits
+            if executorDetected == "Synapse X" and syn and syn.protect_gui then
+                -- Synapse X protection
+                syn.protect_gui(self.ScreenGui)
+                self.ScreenGui.Parent = game:GetService("CoreGui")
+            elseif executorDetected == "Krnl" and KRNL_LOADED and get_hidden_gui then
+                -- KRNL protection
+                self.ScreenGui.Parent = get_hidden_gui()
+            elseif executorDetected == "Xeno" and XENO_LOADED then
+                -- Xeno protection
+                self.ScreenGui.Parent = game:GetService("CoreGui")
+            elseif executorDetected == "ScriptWare" and identifyexecutor and identifyexecutor() == "ScriptWare" then
+                -- ScriptWare protection
+                self.ScreenGui.Parent = game:GetService("CoreGui")
+            else
+                -- Fallback for other executors - try CoreGui first, then PlayerGui
+                local success, err = pcall(function()
+                    self.ScreenGui.Parent = game:GetService("CoreGui")
+                end)
+                
+                if not success then
+                    self.ScreenGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+                    warn("DRAXUI: Failed to parent to CoreGui, using PlayerGui instead. Error: " .. tostring(err))
+                end
+            end
+        else
+            -- Use specified parent if provided
+            self.ScreenGui.Parent = parent
+        end
+    else
+        -- Normal Roblox environment
+        self.ScreenGui.Parent = parent or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    end
     self.Connections = {}
     
     -- Apply custom settings
     if settings then
-        Config.DefaultFont = settings.Font or Config.DefaultFont
-        Config.FontSize = settings.FontSize or Config.FontSize
-        Config.Theme = settings.Theme or Config.Theme
+        -- Deep merge settings with Config
+        for key, value in pairs(settings) do
+            if key == "Theme" and type(value) == "table" then
+                for themeKey, themeValue in pairs(value) do
+                    Config.Theme[themeKey] = themeValue
+                end
+            else
+                Config[key] = value
+            end
+        end
     end
     
-    -- Create particle background
+    -- Create blur effect if enabled
+    if Config.EnableBlur then
+        State.Blur = CreateUIElement("BlurEffect", {
+            Parent = game:GetService("Lighting"),
+            Size = 0,
+        })
+        
+        -- Animate blur in
+        CreateTween(State.Blur, {Size = Config.BlurSize}, Config.Theme.AnimationSpeed * 2)
+    end
+    
+    -- Create watermark
+    if Config.WatermarkText and Config.WatermarkText ~= "" then
+        State.Watermark = CreateUIElement("TextLabel", {
+            Parent = self.ScreenGui,
+            Size = UDim2.new(0, 150, 0, 30),
+            Position = UDim2.new(1, -160, 0, 10),
+            BackgroundColor3 = Config.Theme.BackgroundColor,
+            BackgroundTransparency = Config.WatermarkTransparency,
+            Text = Config.WatermarkText .. " v" .. DRAXUI.Version,
+            TextColor3 = Config.Theme.TextColor,
+            Font = Config.DefaultFont,
+            TextSize = Config.FontSize,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            BorderSizePixel = 0,
+            ZIndex = 9999,
+        })
+        
+        local corner = CreateUIElement("UICorner", {
+            Parent = State.Watermark,
+            CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
+        })
+        
+        -- Add gradient to watermark
+        CreateGradient(
+            State.Watermark, 
+            Config.Theme.GradientStart or Config.Theme.PrimaryColor, 
+            Config.Theme.GradientEnd or Config.Theme.PrimaryColor:Lerp(Color3.new(1, 1, 1), 0.2),
+            45
+        )
+        
+        -- Add shadow to watermark
+        if Config.DropShadowEnabled then
+            CreateDropShadow(State.Watermark, State.Watermark.Size, State.Watermark.Position, 0.8)
+        end
+        
+        -- Animate watermark in
+        State.Watermark.Position = UDim2.new(1, 0, 0, 10)
+        CreateTween(State.Watermark, {Position = UDim2.new(1, -160, 0, 10)}, Config.Theme.AnimationSpeed)
+    end
+    
+    -- Create particle background with improved visuals
     self.Particles = {}
     for i = 1, Config.ParticleCount do
+        local size = math.random(3, 7) -- Varied sizes
         local particle = CreateUIElement("Frame", {
             Parent = self.ScreenGui,
-            Size = UDim2.new(0, 5, 0, 5),
+            Size = UDim2.new(0, size, 0, size),
             Position = UDim2.new(math.random(), 0, math.random(), 0),
-            BackgroundColor3 = Config.Theme.PrimaryColor,
-            BackgroundTransparency = 0.7,
+            BackgroundColor3 = Config.Theme.PrimaryColor:Lerp(Color3.new(1, 1, 1), math.random() * 0.3), -- Varied colors
+            BackgroundTransparency = 0.7 + (math.random() * 0.2), -- Varied transparency
             BorderSizePixel = 0,
             ZIndex = 50,
         })
+        
         local corner = CreateUIElement("UICorner", {
             Parent = particle,
-            CornerRadius = UDim.new(0, 5),
+            CornerRadius = UDim.new(1, 0), -- Perfect circle
         })
-        self.Particles[i] = {Frame = particle, Velocity = Vector2.new(math.random(-1, 1) * Config.ParticleSpeed, math.random(-1, 1) * Config.ParticleSpeed)}
+        
+        -- Add glow effect to some particles
+        if math.random() > 0.7 then
+            local glow = CreateUIElement("UIStroke", {
+                Parent = particle,
+                Color = Config.Theme.PrimaryColor,
+                Transparency = 0.5,
+                Thickness = 1,
+            })
+        end
+        
+        self.Particles[i] = {
+            Frame = particle, 
+            Velocity = Vector2.new(math.random(-10, 10) / 10 * Config.ParticleSpeed, math.random(-10, 10) / 10 * Config.ParticleSpeed),
+            Size = size,
+            OriginalSize = size,
+            PulseDirection = math.random() > 0.5 and 1 or -1,
+            PulseSpeed = math.random(5, 15) / 10,
+        }
     end
     
-    -- Animate particles
+    -- Animate particles with improved effects
     table.insert(self.Connections, RunService.RenderStepped:Connect(function(dt)
         for _, particle in ipairs(self.Particles) do
+            -- Move particle
             local pos = particle.Frame.Position
             local newX = pos.X.Scale + particle.Velocity.X * dt
             local newY = pos.Y.Scale + particle.Velocity.Y * dt
-            if newX > 1 or newX < 0 then particle.Velocity.X = -particle.Velocity.X end
-            if newY > 1 or newY < 0 then particle.Velocity.Y = -particle.Velocity.Y end
+            
+            -- Bounce off edges
+            if newX > 1 or newX < 0 then 
+                particle.Velocity.X = -particle.Velocity.X 
+                -- Slightly change velocity on bounce for more natural movement
+                particle.Velocity.X = particle.Velocity.X * (0.9 + math.random() * 0.2)
+            end
+            if newY > 1 or newY < 0 then 
+                particle.Velocity.Y = -particle.Velocity.Y 
+                particle.Velocity.Y = particle.Velocity.Y * (0.9 + math.random() * 0.2)
+            end
+            
             particle.Frame.Position = UDim2.new(newX, 0, newY, 0)
+            
+            -- Pulse size effect for some particles
+            if Config.EnableAnimations and math.random() > 0.95 then
+                particle.Size = particle.Size + (particle.PulseDirection * particle.PulseSpeed * dt)
+                
+                -- Reverse direction if size gets too big or small
+                if particle.Size > particle.OriginalSize * 1.5 or particle.Size < particle.OriginalSize * 0.7 then
+                    particle.PulseDirection = -particle.PulseDirection
+                end
+                
+                particle.Frame.Size = UDim2.new(0, particle.Size, 0, particle.Size)
+            end
         end
     end))
+    
+    -- Track mouse position for effects
+    table.insert(self.Connections, UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            State.MousePosition = input.Position
+        end
+    end))
+    
+    -- Play initialization sound
+    PlaySound("Notification")
     
     return self
 end
@@ -145,6 +509,7 @@ function DRAXUI.Window(name, options)
         IsOpen = true,
         Tabs = {},
         Elements = {},
+        Theme = options.theme or "Default",
     }
     State.Windows[name] = windowState
 
@@ -152,52 +517,181 @@ function DRAXUI.Window(name, options)
         return
     end
 
+    -- Apply theme preset if specified
+    local currentTheme = Config.Theme
+    if windowState.Theme ~= "Default" and State.ThemePresets[windowState.Theme] then
+        for key, value in pairs(State.ThemePresets[windowState.Theme]) do
+            currentTheme[key] = value
+        end
+    end
+
     State.CurrentWindow = name
     local frame = windowState.Frame
     if not frame then
+        -- Create window with drop shadow if enabled
         frame = CreateUIElement("Frame", {
             Parent = self.ScreenGui,
             Size = UDim2.new(0, windowState.Size.X, 0, windowState.Size.Y),
             Position = windowState.Position,
-            BackgroundColor3 = Config.Theme.BackgroundColor,
+            BackgroundColor3 = currentTheme.BackgroundColor,
             BackgroundTransparency = Config.Theme.WindowTransparency,
             BorderSizePixel = 0,
             ZIndex = State.ZIndex,
+            ClipsDescendants = true, -- For ripple effects
         })
+        
+        -- Add rounded corners
         local corner = CreateUIElement("UICorner", {
             Parent = frame,
             CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
         })
-        CreateTween(frame, {BackgroundTransparency = Config.Theme.WindowTransparency}, Config.Theme.AnimationSpeed)
         
+        -- Add drop shadow
+        if Config.DropShadowEnabled then
+            CreateDropShadow(frame, frame.Size, frame.Position)
+        end
+        
+        -- Create title bar with gradient
         local titleBar = CreateUIElement("Frame", {
             Parent = frame,
             Size = UDim2.new(1, 0, 0, 30),
-            BackgroundColor3 = Config.Theme.PrimaryColor,
+            BackgroundColor3 = currentTheme.PrimaryColor,
             BorderSizePixel = 0,
             ZIndex = State.ZIndex + 1,
         })
+        
+        -- Add rounded corners to title bar
         local titleCorner = CreateUIElement("UICorner", {
             Parent = titleBar,
             CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
         })
         
+        -- Add gradient to title bar
+        CreateGradient(
+            titleBar, 
+            currentTheme.GradientStart or currentTheme.PrimaryColor, 
+            currentTheme.GradientEnd or currentTheme.PrimaryColor:Lerp(Color3.new(1, 1, 1), 0.2),
+            45
+        )
+        
+        -- Add title text
         local titleText = CreateUIElement("TextLabel", {
             Parent = titleBar,
-            Size = UDim2.new(1, -10, 1, 0),
-            Position = UDim2.new(0, 5, 0, 0),
+            Size = UDim2.new(1, -60, 1, 0),
+            Position = UDim2.new(0, 10, 0, 0),
             BackgroundTransparency = 1,
             Text = name,
-            TextColor3 = Config.Theme.TextColor,
+            TextColor3 = currentTheme.TextColor,
             Font = Config.DefaultFont,
             TextSize = Config.FontSize,
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = State.ZIndex + 2,
         })
         
+        -- Add window controls (close, minimize, etc.)
+        local closeButton = CreateUIElement("TextButton", {
+            Parent = titleBar,
+            Size = UDim2.new(0, 20, 0, 20),
+            Position = UDim2.new(1, -25, 0, 5),
+            BackgroundColor3 = Color3.fromRGB(255, 70, 70),
+            Text = "",
+            ZIndex = State.ZIndex + 2,
+        })
+        
+        local closeCorner = CreateUIElement("UICorner", {
+            Parent = closeButton,
+            CornerRadius = UDim.new(1, 0),
+        })
+        
+        local minimizeButton = CreateUIElement("TextButton", {
+            Parent = titleBar,
+            Size = UDim2.new(0, 20, 0, 20),
+            Position = UDim2.new(1, -50, 0, 5),
+            BackgroundColor3 = Color3.fromRGB(255, 200, 50),
+            Text = "",
+            ZIndex = State.ZIndex + 2,
+        })
+        
+        local minimizeCorner = CreateUIElement("UICorner", {
+            Parent = minimizeButton,
+            CornerRadius = UDim.new(1, 0),
+        })
+        
+        -- Make window draggable
+        titleBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                State.DraggingWindow = name
+                State.DragOffset = frame.Position - UDim2.new(0, input.Position.X, 0, input.Position.Y)
+            end
+        end)
+        
+        titleBar.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and State.DraggingWindow == name then
+                State.DraggingWindow = nil
+            end
+        end)
+        
+        -- Handle window dragging
+        table.insert(self.Connections, UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and State.DraggingWindow == name then
+                frame.Position = State.DragOffset + UDim2.new(0, input.Position.X, 0, input.Position.Y)
+                windowState.Position = frame.Position
+            end
+        end))
+        
+        -- Handle close button
+        closeButton.MouseButton1Click:Connect(function()
+            PlaySound("Click")
+            CreateRippleEffect(closeButton, State.MousePosition)
+            windowState.IsOpen = false
+            CreateTween(frame, {Position = UDim2.new(frame.Position.X.Scale, frame.Position.X.Offset, 1.5, 0)}, Config.Theme.AnimationSpeed).Completed:Connect(function()
+                frame.Visible = false
+            end)
+        end)
+        
+        -- Handle minimize button
+        minimizeButton.MouseButton1Click:Connect(function()
+            PlaySound("Click")
+            CreateRippleEffect(minimizeButton, State.MousePosition)
+            if frame.Size.Y.Offset > 30 then
+                -- Store original size and minimize
+                windowState.OriginalSize = frame.Size
+                CreateTween(frame, {Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset, 0, 30)}, Config.Theme.AnimationSpeed)
+            else
+                -- Restore original size
+                CreateTween(frame, {Size = windowState.OriginalSize}, Config.Theme.AnimationSpeed)
+            end
+        end)
+        
+        -- Add hover effects to buttons
+        closeButton.MouseEnter:Connect(function()
+            PlaySound("Hover")
+            CreateTween(closeButton, {Size = UDim2.new(0, 22, 0, 22), Position = UDim2.new(1, -26, 0, 4)}, Config.Theme.AnimationSpeed / 2)
+        end)
+        
+        closeButton.MouseLeave:Connect(function()
+            CreateTween(closeButton, {Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(1, -25, 0, 5)}, Config.Theme.AnimationSpeed / 2)
+        end)
+        
+        minimizeButton.MouseEnter:Connect(function()
+            PlaySound("Hover")
+            CreateTween(minimizeButton, {Size = UDim2.new(0, 22, 0, 22), Position = UDim2.new(1, -51, 0, 4)}, Config.Theme.AnimationSpeed / 2)
+        end)
+        
+        minimizeButton.MouseLeave:Connect(function()
+            CreateTween(minimizeButton, {Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(1, -50, 0, 5)}, Config.Theme.AnimationSpeed / 2)
+        end)
+        
+        -- Store references
         windowState.Frame = frame
         windowState.TitleBar = titleBar
+        windowState.CloseButton = closeButton
+        windowState.MinimizeButton = minimizeButton
         windowState.NextY = 70 -- Space for tabs
+        
+        -- Animate window in
+        frame.Position = UDim2.new(windowState.Position.X.Scale, windowState.Position.X.Offset, -0.5, 0)
+        CreateTween(frame, {Position = windowState.Position}, Config.Theme.AnimationSpeed)
     end
     
     frame.ZIndex = State.ZIndex
@@ -1030,9 +1524,604 @@ function DRAXUI.ProgressBar(name, value, max, options)
     end
 end
 
--- Get library version
+-- Get DRAXUI version
 function DRAXUI.GetVersion()
     return DRAXUI.Version
 end
 
+-- Create an input box for text entry
+function DRAXUI.InputBox(label, placeholder, callback, options)
+    if not State.CurrentWindow or not State.CurrentTab then return end
+    
+    options = options or {}
+    local windowState = State.Windows[State.CurrentWindow]
+    local tabState = windowState.Tabs[State.CurrentTab]
+    
+    local container = CreateUIElement("Frame", {
+        Parent = tabState.Container,
+        Size = UDim2.new(1, -20, 0, 60),
+        Position = UDim2.new(0, 10, 0, windowState.NextY),
+        BackgroundColor3 = Config.Theme.SecondaryColor,
+        BorderSizePixel = 0,
+        ZIndex = State.ZIndex,
+    })
+    
+    local corner = CreateUIElement("UICorner", {
+        Parent = container,
+        CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
+    })
+    
+    -- Add drop shadow
+    if Config.DropShadowEnabled then
+        CreateDropShadow(container, container.Size, container.Position)
+    end
+    
+    local labelText = CreateUIElement("TextLabel", {
+        Parent = container,
+        Size = UDim2.new(1, -20, 0, 20),
+        Position = UDim2.new(0, 10, 0, 5),
+        BackgroundTransparency = 1,
+        Text = label,
+        TextColor3 = Config.Theme.TextColor,
+        Font = Config.DefaultFont,
+        TextSize = Config.FontSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = State.ZIndex + 1,
+    })
+    
+    local inputBox = CreateUIElement("TextBox", {
+        Parent = container,
+        Size = UDim2.new(1, -20, 0, 25),
+        Position = UDim2.new(0, 10, 0, 30),
+        BackgroundColor3 = Config.Theme.BackgroundColor,
+        BorderSizePixel = 0,
+        Text = options.defaultText or "",
+        PlaceholderText = placeholder,
+        PlaceholderColor3 = Config.Theme.TextColor:Lerp(Config.Theme.BackgroundColor, 0.5),
+        TextColor3 = Config.Theme.TextColor,
+        Font = Config.DefaultFont,
+        TextSize = Config.FontSize,
+        ClearTextOnFocus = options.clearOnFocus ~= false,
+        ZIndex = State.ZIndex + 1,
+    })
+    
+    local inputCorner = CreateUIElement("UICorner", {
+        Parent = inputBox,
+        CornerRadius = UDim.new(0, Config.Theme.CornerRadius - 2),
+    })
+    
+    -- Add focus highlight
+    local focusHighlight = CreateUIElement("UIStroke", {
+        Parent = inputBox,
+        Color = Config.Theme.PrimaryColor,
+        Transparency = 1,
+        Thickness = 2,
+    })
+    
+    -- Add events
+    inputBox.Focused:Connect(function()
+        PlaySound("Click")
+        CreateTween(focusHighlight, {Transparency = 0}, Config.Theme.AnimationSpeed / 2)
+    end)
+    
+    inputBox.FocusLost:Connect(function(enterPressed)
+        CreateTween(focusHighlight, {Transparency = 1}, Config.Theme.AnimationSpeed / 2)
+        if callback then
+            callback(inputBox.Text, enterPressed)
+        end
+    end)
+    
+    -- Add to state for tracking
+    table.insert(State.InputBoxes, {
+        Container = container,
+        InputBox = inputBox,
+        Label = labelText,
+    })
+    
+    windowState.NextY = windowState.NextY + 70
+    return inputBox
+end
+
+-- Create an accordion (collapsible section)
+function DRAXUI.Accordion(title, defaultOpen, options)
+    if not State.CurrentWindow or not State.CurrentTab then return end
+    
+    options = options or {}
+    local windowState = State.Windows[State.CurrentWindow]
+    local tabState = windowState.Tabs[State.CurrentTab]
+    
+    -- Create accordion container
+    local container = CreateUIElement("Frame", {
+        Parent = tabState.Container,
+        Size = UDim2.new(1, -20, 0, 40),
+        Position = UDim2.new(0, 10, 0, windowState.NextY),
+        BackgroundColor3 = Config.Theme.SecondaryColor,
+        BorderSizePixel = 0,
+        ZIndex = State.ZIndex,
+    })
+    
+    local corner = CreateUIElement("UICorner", {
+        Parent = container,
+        CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
+    })
+    
+    -- Add drop shadow
+    if Config.DropShadowEnabled then
+        CreateDropShadow(container, container.Size, container.Position)
+    end
+    
+    -- Add gradient
+    CreateGradient(
+        container, 
+        Config.Theme.SecondaryColor, 
+        Config.Theme.SecondaryColor:Lerp(Config.Theme.PrimaryColor, 0.1),
+        45
+    )
+    
+    -- Create header
+    local header = CreateUIElement("TextButton", {
+        Parent = container,
+        Size = UDim2.new(1, 0, 0, 40),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        ZIndex = State.ZIndex + 1,
+    })
+    
+    local titleText = CreateUIElement("TextLabel", {
+        Parent = header,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Text = title,
+        TextColor3 = Config.Theme.TextColor,
+        Font = Config.DefaultFont,
+        TextSize = Config.FontSize + 2,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = State.ZIndex + 2,
+    })
+    
+    -- Create arrow indicator
+    local arrow = CreateUIElement("TextLabel", {
+        Parent = header,
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -30, 0, 10),
+        BackgroundTransparency = 1,
+        Text = defaultOpen and "▼" or "▶",
+        TextColor3 = Config.Theme.TextColor,
+        Font = Config.DefaultFont,
+        TextSize = Config.FontSize,
+        ZIndex = State.ZIndex + 2,
+    })
+    
+    -- Create content container
+    local content = CreateUIElement("Frame", {
+        Parent = container,
+        Size = UDim2.new(1, -20, 0, 0),
+        Position = UDim2.new(0, 10, 0, 40),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        ZIndex = State.ZIndex + 1,
+    })
+    
+    -- Set initial state
+    local isOpen = defaultOpen or false
+    local contentHeight = 0
+    local accordionState = {
+        Container = container,
+        Content = content,
+        Header = header,
+        Arrow = arrow,
+        IsOpen = isOpen,
+        ContentHeight = contentHeight,
+        Elements = {},
+    }
+    
+    -- Toggle function
+    local function toggleAccordion()
+        isOpen = not isOpen
+        arrow.Text = isOpen and "▼" or "▶"
+        
+        -- Calculate content height based on elements
+        contentHeight = 0
+        for _, element in ipairs(accordionState.Elements) do
+            contentHeight = contentHeight + element.Size.Y.Offset + Config.Theme.ElementSpacing
+        end
+        
+        -- Adjust container size
+        if isOpen then
+            CreateTween(container, {Size = UDim2.new(1, -20, 0, 40 + contentHeight)}, Config.Theme.AnimationSpeed)
+            CreateTween(content, {Size = UDim2.new(1, -20, 0, contentHeight)}, Config.Theme.AnimationSpeed)
+        else
+            CreateTween(container, {Size = UDim2.new(1, -20, 0, 40)}, Config.Theme.AnimationSpeed)
+            CreateTween(content, {Size = UDim2.new(1, -20, 0, 0)}, Config.Theme.AnimationSpeed)
+        end
+        
+        -- Update window layout
+        windowState.NextY = windowState.NextY + (isOpen and contentHeight or -contentHeight)
+        
+        accordionState.IsOpen = isOpen
+        accordionState.ContentHeight = contentHeight
+    end
+    
+    -- Set initial state
+    if isOpen then
+        content.Size = UDim2.new(1, -20, 0, contentHeight)
+        container.Size = UDim2.new(1, -20, 0, 40 + contentHeight)
+    end
+    
+    -- Connect events
+    header.MouseButton1Click:Connect(function()
+        PlaySound("Click")
+        CreateRippleEffect(header, State.MousePosition)
+        toggleAccordion()
+    end)
+    
+    header.MouseEnter:Connect(function()
+        PlaySound("Hover")
+    end)
+    
+    -- Add to state
+    table.insert(State.Accordions, accordionState)
+    
+    -- Update window layout
+    windowState.NextY = windowState.NextY + 50
+    
+    -- Return functions to add elements to the accordion
+    return {
+        AddElement = function(element)
+            element.Parent = content
+            table.insert(accordionState.Elements, element)
+            
+            -- Update heights if open
+            if isOpen then
+                contentHeight = contentHeight + element.Size.Y.Offset + Config.Theme.ElementSpacing
+                accordionState.ContentHeight = contentHeight
+                CreateTween(container, {Size = UDim2.new(1, -20, 0, 40 + contentHeight)}, Config.Theme.AnimationSpeed)
+                CreateTween(content, {Size = UDim2.new(1, -20, 0, contentHeight)}, Config.Theme.AnimationSpeed)
+                windowState.NextY = windowState.NextY + element.Size.Y.Offset + Config.Theme.ElementSpacing
+            end
+            
+            return element
+        end,
+        Toggle = toggleAccordion,
+        GetState = function() return isOpen end
+    }
+end
+
+-- Create a grid layout for organizing elements
+function DRAXUI.GridLayout(columns, options)
+    if not State.CurrentWindow or not State.CurrentTab then return end
+    
+    options = options or {}
+    local windowState = State.Windows[State.CurrentWindow]
+    local tabState = windowState.Tabs[State.CurrentTab]
+    
+    -- Create grid container
+    local container = CreateUIElement("Frame", {
+        Parent = tabState.Container,
+        Size = UDim2.new(1, -20, 0, options.height or 200),
+        Position = UDim2.new(0, 10, 0, windowState.NextY),
+        BackgroundColor3 = options.showBackground and Config.Theme.SecondaryColor or Color3.new(0,0,0),
+        BackgroundTransparency = options.showBackground and 0 or 1,
+        BorderSizePixel = 0,
+        ZIndex = State.ZIndex,
+    })
+    
+    if options.showBackground then
+        local corner = CreateUIElement("UICorner", {
+            Parent = container,
+            CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
+        })
+        
+        -- Add drop shadow
+        if Config.DropShadowEnabled then
+            CreateDropShadow(container, container.Size, container.Position)
+        end
+    end
+    
+    -- Create grid layout
+    local gridLayout = CreateUIElement("UIGridLayout", {
+        Parent = container,
+        CellSize = UDim2.new(1/columns, -(options.padding or 10) * (columns-1)/columns, 0, options.cellHeight or 40),
+        CellPadding = UDim2.new(0, options.padding or 10, 0, options.padding or 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        StartCorner = Enum.StartCorner.TopLeft,
+        FillDirection = Enum.FillDirection.Horizontal,
+        FillDirectionMaxCells = columns,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+    })
+    
+    -- Add to state
+    local gridState = {
+        Container = container,
+        Layout = gridLayout,
+        Columns = columns,
+        Elements = {},
+        CurrentIndex = 0,
+    }
+    
+    table.insert(State.GridLayouts, gridState)
+    
+    -- Update window layout
+    windowState.NextY = windowState.NextY + container.Size.Y.Offset + 10
+    
+    -- Return functions to add elements to the grid
+    return {
+        AddElement = function(element)
+            element.Parent = container
+            element.LayoutOrder = gridState.CurrentIndex
+            gridState.CurrentIndex = gridState.CurrentIndex + 1
+            table.insert(gridState.Elements, element)
+            return element
+        end,
+        Clear = function()
+            for _, element in ipairs(gridState.Elements) do
+                element:Destroy()
+            end
+            gridState.Elements = {}
+            gridState.CurrentIndex = 0
+        end,
+        GetContainer = function() return container end
+    }
+end
+
+-- Create a search bar with results
+function DRAXUI.SearchBar(placeholder, dataSource, onSelect, options)
+    if not State.CurrentWindow or not State.CurrentTab then return end
+    
+    options = options or {}
+    local windowState = State.Windows[State.CurrentWindow]
+    local tabState = windowState.Tabs[State.CurrentTab]
+    
+    -- Create search container
+    local container = CreateUIElement("Frame", {
+        Parent = tabState.Container,
+        Size = UDim2.new(1, -20, 0, options.showResults and 200 or 40),
+        Position = UDim2.new(0, 10, 0, windowState.NextY),
+        BackgroundColor3 = Config.Theme.SecondaryColor,
+        BorderSizePixel = 0,
+        ZIndex = State.ZIndex,
+        ClipsDescendants = true,
+    })
+    
+    local corner = CreateUIElement("UICorner", {
+        Parent = container,
+        CornerRadius = UDim.new(0, Config.Theme.CornerRadius),
+    })
+    
+    -- Add drop shadow
+    if Config.DropShadowEnabled then
+        CreateDropShadow(container, container.Size, container.Position)
+    end
+    
+    -- Create search box
+    local searchBox = CreateUIElement("TextBox", {
+        Parent = container,
+        Size = UDim2.new(1, -20, 0, 30),
+        Position = UDim2.new(0, 10, 0, 5),
+        BackgroundColor3 = Config.Theme.BackgroundColor,
+        BorderSizePixel = 0,
+        Text = "",
+        PlaceholderText = placeholder or "Search...",
+        PlaceholderColor3 = Config.Theme.TextColor:Lerp(Config.Theme.BackgroundColor, 0.5),
+        TextColor3 = Config.Theme.TextColor,
+        Font = Config.DefaultFont,
+        TextSize = Config.FontSize,
+        ClearTextOnFocus = false,
+        ZIndex = State.ZIndex + 1,
+    })
+    
+    local searchCorner = CreateUIElement("UICorner", {
+        Parent = searchBox,
+        CornerRadius = UDim.new(0, Config.Theme.CornerRadius - 2),
+    })
+    
+    -- Create search icon
+    local searchIcon = CreateUIElement("ImageLabel", {
+        Parent = searchBox,
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(1, -25, 0, 7),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://3926305904", -- Roblox search icon
+        ImageRectOffset = Vector2.new(964, 324),
+        ImageRectSize = Vector2.new(36, 36),
+        ImageColor3 = Config.Theme.TextColor,
+        ZIndex = State.ZIndex + 2,
+    })
+    
+    -- Create results container
+    local resultsContainer = CreateUIElement("ScrollingFrame", {
+        Parent = container,
+        Size = UDim2.new(1, -20, 1, -45),
+        Position = UDim2.new(0, 10, 0, 40),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = Config.Theme.PrimaryColor,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ZIndex = State.ZIndex + 1,
+        Visible = options.showResults,
+    })
+    
+    local listLayout = CreateUIElement("UIListLayout", {
+        Parent = resultsContainer,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 5),
+    })
+    
+    -- Function to update results
+    local function updateResults(query)
+        -- Clear previous results
+        for _, child in ipairs(resultsContainer:GetChildren()) do
+            if child:IsA("Frame") then
+                child:Destroy()
+            end
+        end
+        
+        -- Reset canvas size
+        resultsContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+        
+        if query == "" then return end
+        
+        -- Filter data source
+        local results = {}
+        local maxResults = options.maxResults or 5
+        
+        if type(dataSource) == "function" then
+            results = dataSource(query)
+        elseif type(dataSource) == "table" then
+            for _, item in ipairs(dataSource) do
+                local text = type(item) == "table" and (item.text or item.name or item[1]) or tostring(item)
+                if string.find(string.lower(text), string.lower(query)) then
+                    table.insert(results, item)
+                    if #results >= maxResults then break end
+                end
+            end
+        end
+        
+        -- Create result items
+        for i, result in ipairs(results) do
+            local resultText = type(result) == "table" and (result.text or result.name or result[1]) or tostring(result)
+            
+            local resultItem = CreateUIElement("Frame", {
+                Parent = resultsContainer,
+                Size = UDim2.new(1, 0, 0, 30),
+                BackgroundColor3 = Config.Theme.BackgroundColor,
+                BorderSizePixel = 0,
+                ZIndex = State.ZIndex + 2,
+                LayoutOrder = i,
+            })
+            
+            local resultCorner = CreateUIElement("UICorner", {
+                Parent = resultItem,
+                CornerRadius = UDim.new(0, Config.Theme.CornerRadius - 2),
+            })
+            
+            local resultLabel = CreateUIElement("TextButton", {
+                Parent = resultItem,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = resultText,
+                TextColor3 = Config.Theme.TextColor,
+                Font = Config.DefaultFont,
+                TextSize = Config.FontSize,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = State.ZIndex + 3,
+            })
+            
+            -- Highlight matching text
+            local textHighlight = CreateUIElement("TextLabel", {
+                Parent = resultItem,
+                Size = UDim2.new(1, -20, 1, 0),
+                Position = UDim2.new(0, 10, 0, 0),
+                BackgroundTransparency = 1,
+                Text = resultText,
+                TextColor3 = Config.Theme.PrimaryColor,
+                Font = Config.DefaultFont,
+                TextSize = Config.FontSize,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTransparency = 1,
+                ZIndex = State.ZIndex + 3,
+            })
+            
+            -- Add hover effect
+            resultLabel.MouseEnter:Connect(function()
+                PlaySound("Hover")
+                CreateTween(resultItem, {BackgroundColor3 = Config.Theme.SecondaryColor}, Config.Theme.AnimationSpeed / 2)
+                CreateTween(textHighlight, {TextTransparency = 0}, Config.Theme.AnimationSpeed / 2)
+            end)
+            
+            resultLabel.MouseLeave:Connect(function()
+                CreateTween(resultItem, {BackgroundColor3 = Config.Theme.BackgroundColor}, Config.Theme.AnimationSpeed / 2)
+                CreateTween(textHighlight, {TextTransparency = 1}, Config.Theme.AnimationSpeed / 2)
+            end)
+            
+            -- Add click event
+            resultLabel.MouseButton1Click:Connect(function()
+                PlaySound("Click")
+                CreateRippleEffect(resultItem, State.MousePosition)
+                if onSelect then
+                    onSelect(result)
+                end
+                searchBox.Text = resultText
+            end)
+        end
+        
+        -- Update canvas size
+        resultsContainer.CanvasSize = UDim2.new(0, 0, 0, #results * 35)
+    end
+    
+    -- Connect events
+    searchBox.Changed:Connect(function(prop)
+        if prop == "Text" then
+            updateResults(searchBox.Text)
+        end
+    end)
+    
+    searchBox.Focused:Connect(function()
+        PlaySound("Click")
+        if options.expandOnFocus then
+            CreateTween(container, {Size = UDim2.new(1, -20, 0, 200)}, Config.Theme.AnimationSpeed)
+            resultsContainer.Visible = true
+        end
+    end)
+    
+    searchBox.FocusLost:Connect(function()
+        if options.collapseOnFocusLost and not options.showResults then
+            CreateTween(container, {Size = UDim2.new(1, -20, 0, 40)}, Config.Theme.AnimationSpeed)
+            resultsContainer.Visible = false
+        end
+    end)
+    
+    -- Add to state
+    local searchState = {
+        Container = container,
+        SearchBox = searchBox,
+        ResultsContainer = resultsContainer,
+        UpdateResults = updateResults,
+    }
+    
+    table.insert(State.SearchResults, searchState)
+    
+    -- Update window layout
+    windowState.NextY = windowState.NextY + container.Size.Y.Offset + 10
+    
+    return {
+        SetText = function(text)
+            searchBox.Text = text
+        end,
+        GetText = function()
+            return searchBox.Text
+        end,
+        UpdateDataSource = function(newDataSource)
+            dataSource = newDataSource
+            updateResults(searchBox.Text)
+        end,
+        Focus = function()
+            searchBox:CaptureFocus()
+        end
+    }
+end
+
+-- Add loadstring compatibility for exploit scripts
+if isExploitEnvironment then
+    -- Create a global instance for direct access in exploit scripts
+    getgenv = getgenv or function() return _G end
+    getgenv().DRAXUI = DRAXUI
+    
+    -- Auto-initialize if loaded via loadstring
+    if not DRAXUI._LoadedViaRequire then
+        local autoInit = DRAXUI.Init()
+        autoInit:Connect()
+        getgenv().UI = autoInit
+        print("DRAXUI " .. DRAXUI.Version .. " initialized automatically in " .. executorDetected .. " environment")
+        print("Access the UI via the global 'UI' variable")
+    end
+end
+
+-- Module return for require() usage
+DRAXUI._LoadedViaRequire = true
 return DRAXUI
