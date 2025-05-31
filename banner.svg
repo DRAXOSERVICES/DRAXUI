@@ -1,0 +1,57 @@
+<svg width="800" height="200" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E90FF" />
+      <stop offset="100%" stop-color="#141414" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="800" height="200" rx="10" fill="url(#bg-gradient)" />
+  
+  <!-- Particle effects -->
+  <g filter="url(#glow)">
+    <circle cx="100" cy="50" r="3" fill="#FFFFFF" opacity="0.7" />
+    <circle cx="200" cy="120" r="2" fill="#FFFFFF" opacity="0.5" />
+    <circle cx="300" cy="80" r="4" fill="#FFFFFF" opacity="0.6" />
+    <circle cx="400" cy="150" r="3" fill="#FFFFFF" opacity="0.7" />
+    <circle cx="500" cy="40" r="2" fill="#FFFFFF" opacity="0.5" />
+    <circle cx="600" cy="100" r="4" fill="#FFFFFF" opacity="0.6" />
+    <circle cx="700" cy="70" r="3" fill="#FFFFFF" opacity="0.7" />
+    <circle cx="150" cy="180" r="2" fill="#FFFFFF" opacity="0.5" />
+    <circle cx="250" cy="30" r="4" fill="#FFFFFF" opacity="0.6" />
+    <circle cx="350" cy="160" r="3" fill="#FFFFFF" opacity="0.7" />
+    <circle cx="450" cy="90" r="2" fill="#FFFFFF" opacity="0.5" />
+    <circle cx="550" cy="140" r="4" fill="#FFFFFF" opacity="0.6" />
+    <circle cx="650" cy="60" r="3" fill="#FFFFFF" opacity="0.7" />
+    <circle cx="750" cy="170" r="2" fill="#FFFFFF" opacity="0.5" />
+  </g>
+  
+  <!-- UI Elements for decoration -->
+  <rect x="50" y="50" width="120" height="100" rx="8" fill="#323232" opacity="0.7" />
+  <rect x="60" y="60" width="100" height="20" rx="4" fill="#1E90FF" opacity="0.9" />
+  <rect x="60" y="90" width="100" height="10" rx="2" fill="#FFFFFF" opacity="0.3" />
+  <rect x="60" y="110" width="100" height="10" rx="2" fill="#FFFFFF" opacity="0.3" />
+  <rect x="60" y="130" width="100" height="10" rx="2" fill="#FFFFFF" opacity="0.3" />
+  
+  <rect x="630" y="50" width="120" height="100" rx="8" fill="#323232" opacity="0.7" />
+  <rect x="640" y="60" width="100" height="20" rx="4" fill="#1E90FF" opacity="0.9" />
+  <circle cx="650" cy="100" r="10" fill="#1E90FF" opacity="0.9" />
+  <rect x="670" y="95" width="60" height="10" rx="2" fill="#FFFFFF" opacity="0.3" />
+  <rect x="640" y="120" width="100" height="20" rx="4" fill="#505050" opacity="0.7" />
+  
+  <!-- Main Title -->
+  <text x="400" y="100" font-family="Arial, sans-serif" font-size="60" font-weight="bold" text-anchor="middle" fill="#FFFFFF" filter="url(#glow)">
+    DRAXUI
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="400" y="140" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#FFFFFF" opacity="0.9">
+    Modern UI Library for Roblox
+  </text>
+</svg>
