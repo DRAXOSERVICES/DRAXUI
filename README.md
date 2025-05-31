@@ -1,6 +1,6 @@
 # DRAXUI Library for Roblox
 
-![DRAXUI Banner]([https://github.com/yourusername/DRAXUI/raw/main/assets/banner.svg](https://github.com/DRAXOSERVICES/DRAXUI/blob/main/banner.svg))
+![DRAXUI Banner](https://raw.githubusercontent.com/DRAXOSERVICES/DRAXUI/refs/heads/main/banner.svg)
 
 ## Overview
 
