@@ -4,22 +4,39 @@
 
 ## Overview
 
-DRAXUI is an enhanced Roblox UI Library inspired by ImGui and Rayfield, designed to create beautiful, responsive, and feature-rich user interfaces for your Roblox games with minimal effort. The library follows an immediate-mode GUI paradigm, making it intuitive and easy to use.
+DRAXUI is an enhanced Roblox UI Library inspired by ImGui and Rayfield, designed to create beautiful, responsive, and feature-rich user interfaces for your Roblox games and exploit scripts with minimal effort. The library follows an immediate-mode GUI paradigm, making it intuitive and easy to use.
 
 ## Features
 
-- **Immediate-mode GUI** - Simple and intuitive API
-- **Responsive Design** - Adapts to different screen sizes
-- **Animated Particles** - Beautiful background particle effects
-- **Customizable Themes** - Easily change colors and appearance
+- **Immediate-mode GUI**: Simple and intuitive API inspired by ImGui
+- **Responsive Design**: Automatically adapts to different screen sizes
+- **Animated Particles**: Beautiful background particle effects with pulsing and varied colors
+- **Customizable Themes**: Easily change colors with preset themes (Dark, Light, Neon)
+- **Visual Enhancements**:
+  - Gradient backgrounds for UI elements
+  - Drop shadows for depth effect
+  - Ripple effects for interactive elements
+  - Watermark display with customization
+  - Blur effect for improved focus
+- **Sound Effects**: Customizable sounds for interactions
 - **Rich Component Library**:
-  - Windows with draggable title bars
+  - Windows with draggable title bars, minimize and close buttons
   - Tabs for organized content
-  - Buttons with hover effects
+  - Buttons with hover effects and ripple animations
   - Toggles for boolean settings
   - Dropdowns for selection menus
   - Sliders for numeric input
   - Keybinds for custom shortcuts
+  - Text Labels for displaying information
+  - Separators for visual organization
+  - Tooltips for additional information
+  - Notifications for temporary messages
+  - Color Picker for selecting colors
+  - Progress Bars for displaying progress
+  - InputBox for text entry with validation
+  - Accordion for collapsible sections
+  - GridLayout for organizing elements in columns
+  - SearchBar with dynamic filtering
 
 ## Installation
 
@@ -34,6 +51,30 @@ DRAXUI is an enhanced Roblox UI Library inspired by ImGui and Rayfield, designed
 
 1. Import the DRAXUI model from the Roblox Toolbox
 2. Place it in ReplicatedStorage
+
+### Method 3: Exploit Scripts (Xeno, AWP, Synapse X, etc.)
+
+1. Host the `UI.lua` file on GitHub or another raw file hosting service
+2. Use loadstring to load the library directly in your exploit script:
+
+```lua
+loadstring(game:HttpGet('https://raw.githubusercontent.com/yourusername/DRAXUI/main/UI.lua'))()
+
+-- The library automatically initializes and creates a global UI variable
+-- You can access it directly as 'UI'
+
+-- Create a window
+UI:Window("My Exploit GUI")
+
+-- Add components
+UI:Tab("Main")
+UI:Button("Click Me", function()
+    print("Button clicked!")
+end)
+
+-- Connect to start rendering
+UI:Connect()
+```
 
 ## Quick Start
 
@@ -88,6 +129,24 @@ local UI = DRAXUI.Init(nil, {
 })
 ```
 
+## Executor Compatibility
+
+DRAXUI now includes built-in support for various Roblox executors, making it ideal for creating exploit GUIs:
+
+### Features
+
+- **Automatic Executor Detection**: Identifies the current executor environment (Synapse X, KRNL, Xeno, AWP, ScriptWare, etc.)
+- **Protected GUI Handling**: Automatically uses the appropriate method to protect your UI from detection
+- **Global Instance**: When loaded via loadstring, creates a global `UI` variable for easy access
+- **ExecutorInfo Property**: Access information about the current execution environment
+
+```lua
+-- Check if running in an exploit environment
+if UI.ExecutorInfo.IsExploit then
+    print("Running in " .. UI.ExecutorInfo.Executor)
+end
+```
+
 ## API Reference
 
 ### Core Functions
@@ -97,6 +156,7 @@ local UI = DRAXUI.Init(nil, {
 - `DRAXUI.Window(name, [options])` - Create a window
 - `DRAXUI.Tab(name)` - Create a tab in the current window
 - `DRAXUI.End()` - End the current window
+- `DRAXUI.GetVersion()` - Returns the current version of DRAXUI
 
 ### Components
 
