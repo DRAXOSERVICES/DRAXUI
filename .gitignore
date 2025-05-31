@@ -1,0 +1,65 @@
+# Roblox Studio files
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Roblox Studio autosave files
+*.rbxl.lock
+*.rbxlx.lock
+
+# Roblox Studio plugin files
+RobloxStudioPlugins/
+
+# Roblox Studio settings
+RobloxStudioSettings/
+
+# Lua language server files
+.luarc.json
+
+# Visual Studio Code files
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Log files
+*.log
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Rojo project files (keep these if you're using Rojo)
+# default.project.json
+# sourcemap.json
+
+# Selene linter files
+selene.toml
+
+# Misc
+*.zip
+*.rar
+*.7z
