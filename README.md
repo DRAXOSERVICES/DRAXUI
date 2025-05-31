@@ -144,4 +144,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Credits
 
-DRAXUI is developed and maintained by [Your Name/Team]. Inspired by ImGui and Rayfield UI libraries.
+DRAXUI is developed and maintained by DRAXO.dev. Inspired by ImGui and Rayfield UI libraries.
