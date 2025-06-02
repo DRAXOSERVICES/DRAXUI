@@ -58,7 +58,7 @@ DRAXUI is an enhanced Roblox UI Library inspired by ImGui and Rayfield, designed
 2. Use loadstring to load the library directly in your exploit script:
 
 ```lua
-loadstring(game:HttpGet('https://raw.githubusercontent.com/yourusername/DRAXUI/main/UI.lua'))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/DRAXOSERVICES/DRAXUI/main/UI.lua'))()
 
 -- The library automatically initializes and creates a global UI variable
 -- You can access it directly as 'UI'
